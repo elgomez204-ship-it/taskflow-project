@@ -1,0 +1,270 @@
+/* =========================
+   VARIABLES GLOBALES
+========================= */
+:root {
+  --color-bg: #f8fafc;
+  --color-sidebar: #ffffff;
+  --color-primary: #2563eb;
+  --color-secondary: #64748b;
+  --color-text: #0f172a;
+  --color-border: #e2e8f0;
+  --color-card: #ffffff;
+
+  --font-base: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+}
+
+
+/* =========================
+   RESET BÁSICO
+========================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-base);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+button,
+input {
+  font-family: inherit;
+  font-size: 1rem; /* mínimo 16px */
+}
+
+
+/* =========================
+   SIDEBAR
+========================= */
+aside {
+  width: 260px;
+  background-color: var(--color-sidebar);
+  border-right: 1px solid var(--color-border);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+}
+
+aside h1 {
+  font-size: 1.25rem;
+  margin-bottom: var(--spacing-lg);
+}
+
+aside nav h2 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  margin: var(--spacing-lg) 0 var(--spacing-sm);
+}
+
+aside nav li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+aside nav li:hover {
+  background-color: var(--color-bg);
+}
+
+
+/* =========================
+   CONTENIDO PRINCIPAL
+========================= */
+main {
+  flex: 1;
+  padding: var(--spacing-lg);
+}
+
+main > header {
+  margin-bottom: var(--spacing-lg);
+}
+
+main > header h2 {
+  font-size: 1.5rem;
+}
+
+
+/* =========================
+   TARJETAS / CARDS
+========================= */
+section {
+  margin-bottom: var(--spacing-lg);
+}
+
+section ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+}
+
+section li {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+
+/* =========================
+   PROGRESO GENERAL
+========================= */
+progress {
+  width: 100%;
+  height: 0.75rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: var(--spacing-sm) 0;
+}
+
+
+/* =========================
+   FORMULARIOS Y BOTONES
+========================= */
+input {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+button {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+footer {
+  text-align: center;
+  padding: var(--spacing-md);
+  color: var(--color-secondary);
+  font-size: 0.875rem;
+}
+
+/* =========================
+   RESPONSIVE - PANTALLAS PEQUEÑAS
+========================= */
+@media (max-width: 768px) {
+
+  /* Layout general */
+  body {
+    flex-direction: column;
+  }
+
+  /* Sidebar pasa arriba */
+  aside {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
+  aside h1 {
+    margin-bottom: 0;
+    margin-right: var(--spacing-md);
+  }
+
+  aside nav {
+    display: flex;
+    gap: var(--spacing-lg);
+  }
+
+  aside nav h2 {
+    display: none; /* Ocultamos títulos en móvil */
+  }
+
+  aside nav ul {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+
+  aside nav li {
+    padding: var(--spacing-xs);
+    white-space: nowrap;
+  }
+
+  /* Contenido principal */
+  main {
+    padding: var(--spacing-md);
+  }
+
+  /* Tarjetas en una sola columna */
+  section ul {
+    grid-template-columns: 1fr;
+  }
+
+  /* Progreso más compacto */
+  progress {
+    height: 0.6rem;
+  }
+
+  /* Formularios adaptados */
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  input,
+  button {
+    width: 100%;
+  }
+
+  /* Footer ajustado */
+  footer {
+    font-size: 0.75rem;
+    padding: var(--spacing-sm);
+  }
+}

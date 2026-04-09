@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <link rel="stylesheet" href="style.css"><title>TaskFlow</title>
+</head>
+<body>
+
+  <!-- Barra lateral -->
+  <aside>
+    <h1>TaskFlow</h1>
+
+    <nav>
+      <h2>Tareas</h2>
+      <ul>
+        <li>Todas <span>0</span></li>
+        <li>Pendientes <span>0</span></li>
+        <li>Completadas <span>0</span></li>
+      </ul>
+
+      <h2>Vistas</h2>
+      <ul>
+        <li>Estadísticas</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Contenido principal -->
+  <main>
+    <header>
+      <h2>Estadísticas</h2>
+    </header>
+
+    <!-- Tarjetas de estadísticas -->
+    <section aria-labelledby="summary-title">
+      <h3 id="summary-title">Resumen</h3>
+
+      <ul>
+        <li>Total: <span id="total">0</span></li>
+        <li>Completadas: <span id="completed">0</span></li>
+        <li>Pendientes: <span id="pending">0</span></li>
+        <li>Progreso: <span id="progress">0%</span></li>
+      </ul>
+    </section>
+
+    <!-- Progreso general -->
+    <section aria-labelledby="progress-title">
+      <h3 id="progress-title">Progreso general</h3>
+      <progress value="0" max="100"></progress>
+      <p>0 de 0 tareas completadas</p>
+    </section>
+
+    <!-- Estadísticas por categoría -->
+    <section aria-labelledby="category-title">
+      <h3 id="category-title">Por categoría</h3>
+      <ul>
+        <li>Personal <span>0</span></li>
+        <li>Trabajo <span>0</span></li>
+        <li>Urgente <span>0</span></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 TaskFlow</p>
+  </footer>
+
+</body>
+</html>
+``

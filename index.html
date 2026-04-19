@@ -184,7 +184,7 @@
              dark:[&::-webkit-progress-bar]:bg-slate-700
              [&::-webkit-progress-value]:bg-green-500"
     ></progress>
-    <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
+    <p id="progress-detail" class="text-xs text-slate-400 dark:text-slate-500 mt-2">
       0 de 0 tareas completadas
     </p>
   </section>
@@ -200,6 +200,19 @@
                placeholder:text-slate-400 dark:placeholder:text-slate-500"
         placeholder="Añadir nueva tarea..."
       />
+      <select
+        id="priority-select"
+        class="px-4 py-2 rounded-lg border bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+      >
+        <option value="medium">Prioridad media</option>
+        <option value="high">Prioridad alta</option>
+        <option value="low">Prioridad baja</option>
+      </select>
+      <input
+        id="due-date-input"
+        type="date"
+        class="px-4 py-2 rounded-lg border bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+      />
       <input
         id="search-input"
         class="px-4 py-2 rounded-lg border
@@ -208,13 +221,28 @@
                placeholder:text-slate-400 dark:placeholder:text-slate-500"
         placeholder="Buscar"
       />
+      <select
+        id="sort-select"
+        class="px-4 py-2 rounded-lg border bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700"
+      >
+        <option value="newest">Mas recientes</option>
+        <option value="oldest">Mas antiguas</option>
+        <option value="az">A-Z</option>
+        <option value="completed-first">Completadas primero</option>
+        <option value="priority-high">Prioridad alta primero</option>
+      </select>
+    </div>
+    <p id="task-input-error" class="hidden text-sm text-red-500" aria-live="polite"></p>
+    <div id="undo-banner" class="hidden text-sm bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg flex items-center justify-between">
+      <span id="undo-message">Tarea eliminada.</span>
+      <button id="undo-delete" class="text-blue-600 dark:text-blue-300 font-medium">Deshacer</button>
     </div>
 
     <!-- Lista -->
     <ul id="task-list" class="space-y-3"></ul>
 
     <!-- Estado vacío -->
-    <div class="text-center text-slate-400 dark:text-slate-500 mt-16">
+    <div id="empty-state" class="text-center text-slate-400 dark:text-slate-500 mt-16">
       <div class="text-5xl mb-4">📋</div>
       <p class="font-medium">No hay tareas</p>
       <p class="text-sm">Añade una nueva tarea para empezar</p>
@@ -233,10 +261,12 @@
   >
     <input type="checkbox" />
     <span class="task-text flex-1"></span>
+    <span data-role="priority" class="text-xs px-2 py-1 rounded-full"></span>
+    <span data-role="due-date" class="text-xs text-slate-500 dark:text-slate-400"></span>
     <button class="text-red-500 hover:text-red-600">✕</button>
   </li>
 </template>
 
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

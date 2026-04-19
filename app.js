@@ -1,207 +1,294 @@
-/* =========================
-   CONSTANTES
-========================= */
-const STORAGE_KEY = "taskflow_tasks";
+import {
+  calculateTaskStats,
+  createTask,
+  getVisibleTasks,
+  loadTasks,
+  saveTasks,
+  validateTaskMeta,
+  validateTaskTitle
+} from "./js/task-manager.js";
+import {
+  buildTaskItem,
+  clearFormError,
+  showFormError,
+  toggleEmptyState
+} from "./js/ui.js";
 
-/* =========================
-   ESTADO GLOBAL
-========================= */
-let tasks = loadTasks();
-let currentFilter = "all";
-let searchQuery = "";
-
-/* =========================
-   SELECTORES DEL DOM
-========================= */
-const taskInput = document.querySelector("#task-input");
-const taskList = document.querySelector("#task-list");
-const taskTemplate = document.querySelector("#task-template");
-
-const searchInput = document.querySelector("#search-input");
-const filterItems = document.querySelectorAll("[data-filter]");
-const completeAllBtn = document.querySelector("#complete-all");
-const clearCompletedBtn = document.querySelector("#clear-completed");
-
-const totalSpan = document.querySelector("#total");
-const completedSpan = document.querySelector("#completed");
-const pendingSpan = document.querySelector("#pending");
-const progressSpan = document.querySelector("#progress");
-const progressBar = document.querySelector("progress");
-
-/* =========================
-   LOCAL STORAGE
-========================= */
-function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
-function loadTasks() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return [];
-  return JSON.parse(data);
-}
-
-/* =========================
-   UTILIDADES
-========================= */
-function createTask(title) {
-  return {
-    id: Date.now(),
-    title: title.trim(),
-    completed: false
-  };
-}
-
-function getFilteredTasks() {
-  return tasks
-    .filter(task => {
-      if (currentFilter === "pending") return !task.completed;
-      if (currentFilter === "completed") return task.completed;
-      return true;
-    })
-    .filter(task =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-}
-
-/* =========================
-   RENDERIZADO
-========================= */
-function renderTasks() {
-  taskList.innerHTML = "";
-
-  getFilteredTasks().forEach(task => {
-    const fragment = taskTemplate.content.cloneNode(true);
-    const li = fragment.querySelector("li");
-    const checkbox = fragment.querySelector("input");
-    const text = fragment.querySelector(".task-text");
-    const deleteBtn = fragment.querySelector("button");
-
-    text.textContent = task.title;
-    checkbox.checked = task.completed;
-
-    checkbox.addEventListener("change", () => toggleTask(task.id));
-    deleteBtn.addEventListener("click", () => deleteTask(task.id));
-    text.addEventListener("dblclick", () => editTask(task.id));
-
-    taskList.appendChild(fragment);
-  });
-}
-
-/* =========================
-   ESTADÍSTICAS
-========================= */
-function updateStats() {
-  const total = tasks.length;
-  const completed = tasks.filter(t => t.completed).length;
-  const pending = total - completed;
-  const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-  totalSpan.textContent = total;
-  completedSpan.textContent = completed;
-  pendingSpan.textContent = pending;
-  progressSpan.textContent = `${progress}%`;
-  progressBar.value = progress;
-}
-
-/* =========================
-   ACCIONES
-========================= */
-function addTask(title) {
-  if (!title.trim()) return;
-  tasks.push(createTask(title));
-  saveAndUpdate();
-}
-
-function toggleTask(id) {
-  tasks = tasks.map(task =>
-    task.id === id ? { ...task, completed: !task.completed } : task
-  );
-  saveAndUpdate();
-}
-
-function deleteTask(id) {
-  tasks = tasks.filter(task => task.id !== id);
-  saveAndUpdate();
-}
-
-function editTask(id) {
-  const task = tasks.find(t => t.id === id);
-  const newTitle = prompt("Editar tarea", task.title);
-
-  if (newTitle && newTitle.trim()) {
-    task.title = newTitle.trim();
-    saveAndUpdate();
-  }
-}
-
-function completeAllTasks() {
-  tasks = tasks.map(task => ({ ...task, completed: true }));
-  saveAndUpdate();
-}
-
-function clearCompletedTasks() {
-  tasks = tasks.filter(task => !task.completed);
-  saveAndUpdate();
-}
-
-function saveAndUpdate() {
-  saveTasks();
-  renderTasks();
-  updateStats();
-}
-
-/* =========================
-   EVENTOS
-========================= */
-
-/* ➕ Añadir tarea con ENTER */
-taskInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    addTask(taskInput.value);
-    taskInput.value = "";
-  }
-});
-
-/* 🔍 Búsqueda */
-searchInput.addEventListener("input", e => {
-  searchQuery = e.target.value;
-  renderTasks();
-});
-
-/* 🧭 Filtros */
-filterItems.forEach(item => {
-  item.addEventListener("click", () => {
-    currentFilter = item.dataset.filter;
-    renderTasks();
-  });
-});
-
-/* Acciones masivas */
-completeAllBtn.addEventListener("click", completeAllTasks);
-clearCompletedBtn.addEventListener("click", clearCompletedTasks);
-
-/* =========================
-   MODO OSCURO
-========================= */
-const themeToggleBtn = document.querySelector("#theme-toggle");
 const THEME_KEY = "taskflow_theme";
-const root = document.documentElement;
 
-if (localStorage.getItem(THEME_KEY) === "dark") {
-  root.classList.add("dark");
+const state = {
+  tasks: loadTasks(),
+  selectedFilter: "all",
+  searchQuery: "",
+  sortBy: "newest",
+  lastDeletedTask: null,
+  undoTimeoutId: null
+};
+
+const dom = {
+  taskInput: document.querySelector("#task-input"),
+  taskList: document.querySelector("#task-list"),
+  taskTemplate: document.querySelector("#task-template"),
+  prioritySelect: document.querySelector("#priority-select"),
+  dueDateInput: document.querySelector("#due-date-input"),
+  searchInput: document.querySelector("#search-input"),
+  sortSelect: document.querySelector("#sort-select"),
+  filterItems: document.querySelectorAll("[data-filter]"),
+  completeAllButton: document.querySelector("#complete-all"),
+  clearCompletedButton: document.querySelector("#clear-completed"),
+  themeToggleButton: document.querySelector("#theme-toggle"),
+  totalCounter: document.querySelector("#total"),
+  completedCounter: document.querySelector("#completed"),
+  pendingCounter: document.querySelector("#pending"),
+  progressCounter: document.querySelector("#progress"),
+  progressBar: document.querySelector("progress"),
+  progressDetail: document.querySelector("#progress-detail"),
+  emptyState: document.querySelector("#empty-state"),
+  inputError: document.querySelector("#task-input-error"),
+  undoBanner: document.querySelector("#undo-banner"),
+  undoMessage: document.querySelector("#undo-message"),
+  undoDeleteButton: document.querySelector("#undo-delete")
+};
+
+/**
+ * Renderiza la lista según filtro y búsqueda.
+ */
+function renderTaskList() {
+  dom.taskList.innerHTML = "";
+
+  const visibleTasks = getVisibleTasks(
+    state.tasks,
+    state.selectedFilter,
+    state.searchQuery,
+    state.sortBy
+  );
+
+  visibleTasks.forEach(task => {
+    const fragment = buildTaskItem(dom.taskTemplate, task, {
+      onToggle: toggleTaskStatus,
+      onDelete: deleteTask,
+      onEdit: editTask
+    });
+
+    dom.taskList.appendChild(fragment);
+  });
 }
 
-themeToggleBtn.addEventListener("click", () => {
-  root.classList.toggle("dark");
+/**
+ * Actualiza contadores y barra de progreso.
+ */
+function renderStatistics() {
+  const stats = calculateTaskStats(state.tasks);
+
+  dom.totalCounter.textContent = String(stats.total);
+  dom.completedCounter.textContent = String(stats.completed);
+  dom.pendingCounter.textContent = String(stats.pending);
+  dom.progressCounter.textContent = `${stats.progress}%`;
+  dom.progressBar.value = stats.progress;
+  dom.progressDetail.textContent = `${stats.completed} de ${stats.total} tareas completadas`;
+}
+
+/**
+ * Persiste y refresca toda la vista.
+ */
+function syncView() {
+  saveTasks(state.tasks);
+  renderTaskList();
+  renderStatistics();
+  toggleEmptyState(dom.emptyState, state.tasks.length);
+}
+
+/**
+ * Agrega una tarea validando el texto ingresado.
+ * @param {string} rawTitle
+ */
+function addTask(rawTitle) {
+  const validation = validateTaskTitle(rawTitle, state.tasks);
+  const metaValidation = validateTaskMeta(dom.prioritySelect.value, dom.dueDateInput.value);
+
+  if (!validation.isValid) {
+    showFormError(dom.inputError, validation.message);
+    return;
+  }
+
+  if (!metaValidation.isValid) {
+    showFormError(dom.inputError, metaValidation.message);
+    return;
+  }
+
+  clearFormError(dom.inputError);
+  state.tasks.push(
+    createTask(validation.normalizedTitle, metaValidation.priority, metaValidation.dueDate)
+  );
+  syncView();
+  dom.taskInput.value = "";
+  dom.prioritySelect.value = "medium";
+  dom.dueDateInput.value = "";
+}
+
+/**
+ * Alterna estado completado de una tarea.
+ * @param {number} taskId
+ */
+function toggleTaskStatus(taskId) {
+  state.tasks = state.tasks.map(task =>
+    task.id === taskId ? { ...task, completed: !task.completed } : task
+  );
+  syncView();
+}
+
+/**
+ * Elimina una tarea por id.
+ * @param {number} taskId
+ */
+function deleteTask(taskId) {
+  const removedTask = state.tasks.find(task => task.id === taskId);
+  state.tasks = state.tasks.filter(task => task.id !== taskId);
+  setupUndoDelete(removedTask);
+  syncView();
+}
+
+/**
+ * Edita una tarea existente usando validaciones.
+ * @param {number} taskId
+ */
+function editTask(taskId) {
+  const targetTask = state.tasks.find(task => task.id === taskId);
+  if (!targetTask) return;
+
+  const draftTitle = prompt("Editar tarea", targetTask.title);
+  if (draftTitle === null) return;
+
+  const otherTasks = state.tasks.filter(task => task.id !== taskId);
+  const validation = validateTaskTitle(draftTitle, otherTasks);
+
+  if (!validation.isValid) {
+    alert(validation.message);
+    return;
+  }
+
+  if (validation.normalizedTitle === targetTask.title) return;
+
+  state.tasks = state.tasks.map(task =>
+    task.id === taskId
+      ? { ...task, title: validation.normalizedTitle }
+      : task
+  );
+  syncView();
+}
+
+/**
+ * Habilita una ventana corta para deshacer una eliminacion.
+ * @param {{id:number,title:string}|null} task
+ */
+function setupUndoDelete(task) {
+  if (!task) return;
+
+  state.lastDeletedTask = task;
+  dom.undoMessage.textContent = `Tarea eliminada: "${task.title}"`;
+  dom.undoBanner.classList.remove("hidden");
+
+  if (state.undoTimeoutId) clearTimeout(state.undoTimeoutId);
+  state.undoTimeoutId = window.setTimeout(() => {
+    state.lastDeletedTask = null;
+    dom.undoBanner.classList.add("hidden");
+  }, 5000);
+}
+
+/**
+ * Restaura la ultima tarea eliminada si aun esta disponible.
+ */
+function undoDeleteTask() {
+  if (!state.lastDeletedTask) return;
+
+  state.tasks.push(state.lastDeletedTask);
+  state.lastDeletedTask = null;
+  if (state.undoTimeoutId) clearTimeout(state.undoTimeoutId);
+  dom.undoBanner.classList.add("hidden");
+  syncView();
+}
+
+/**
+ * Marca todas las tareas como completadas.
+ */
+function completeAllTasks() {
+  if (state.tasks.length === 0) return;
+  state.tasks = state.tasks.map(task => ({ ...task, completed: true }));
+  syncView();
+}
+
+/**
+ * Borra todas las tareas completadas.
+ */
+function clearCompletedTasks() {
+  state.tasks = state.tasks.filter(task => !task.completed);
+  syncView();
+}
+
+/**
+ * Aplica el tema guardado previamente en localStorage.
+ */
+function applySavedTheme() {
+  if (localStorage.getItem(THEME_KEY) === "dark") {
+    document.documentElement.classList.add("dark");
+  }
+}
+
+/**
+ * Alterna entre modo claro y oscuro persistiendo la seleccion.
+ */
+function toggleTheme() {
+  document.documentElement.classList.toggle("dark");
   localStorage.setItem(
     THEME_KEY,
-    root.classList.contains("dark") ? "dark" : "light"
+    document.documentElement.classList.contains("dark") ? "dark" : "light"
   );
-});
+}
 
-/* =========================
-   INICIALIZACIÓN
-========================= */
-renderTasks();
-updateStats();
+/**
+ * Registra todos los listeners de interaccion de la app.
+ */
+function bindEvents() {
+  dom.taskInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      addTask(dom.taskInput.value);
+    }
+  });
+
+  dom.taskInput.addEventListener("input", () => {
+    if (dom.inputError.textContent) clearFormError(dom.inputError);
+  });
+
+  dom.searchInput.addEventListener("input", event => {
+    state.searchQuery = event.target.value;
+    renderTaskList();
+  });
+
+  dom.sortSelect.addEventListener("change", event => {
+    state.sortBy = event.target.value;
+    renderTaskList();
+  });
+
+  dom.filterItems.forEach(item => {
+    item.addEventListener("click", () => {
+      state.selectedFilter = item.dataset.filter;
+      renderTaskList();
+    });
+  });
+
+  dom.completeAllButton.addEventListener("click", completeAllTasks);
+  dom.clearCompletedButton.addEventListener("click", clearCompletedTasks);
+  dom.themeToggleButton.addEventListener("click", toggleTheme);
+  dom.undoDeleteButton.addEventListener("click", undoDeleteTask);
+}
+
+/**
+ * Inicializa la aplicacion.
+ */
+function initApp() {
+  applySavedTheme();
+  bindEvents();
+  syncView();
+}
+
+initApp();

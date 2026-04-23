@@ -5,7 +5,7 @@
 Definir prompts reutilizables para usar IA de forma mas efectiva al desarrollar `TaskFlow`, incluyendo:
 
 - rol definido
-- few-shot prompting (con ejemplos)
+- few-shot prompting 
 - razonamiento paso a paso
 - restricciones claras de salida
 
@@ -230,51 +230,6 @@ No repitas informacion entre A y B.
 
 ---
 
-## 11) Prompt para comparar alternativas (decisiones)
-
-**Prompt**
-
-```text
-Necesito decidir entre:
-1) mantener todo en `app.js`
-2) separar en modulos `task-manager.js` y `ui.js`
-Compara ambas opciones con matriz breve:
-- complejidad inicial
-- mantenibilidad
-- riesgo de errores
-- velocidad de onboarding
-Concluye con recomendacion para TaskFlow y por que.
-```
-
-**Por que funciona bien**
-
-- Obliga a evaluar trade-offs en vez de asumir una solucion.
-- Estructura una decision de arquitectura con criterios claros.
-- Deja rastro justificable para futuras revisiones.
-
----
-
-## 12) Prompt para restricciones de formato (salida lista para pegar)
-
-**Prompt**
-
-```text
-Genera un bloque Markdown para `docs/ai/cursor-workflow.md`:
-- titulo h2
-- 1 parrafo introductorio
-- lista de atajos (6 items)
-- 2 ejemplos concretos de mejora de codigo
-- cierre con 3 siguientes pasos
-No uses tablas.
-```
-
-**Por que funciona bien**
-
-- Da una salida directamente utilizable sin reprocesar.
-- Evita formato no deseado (por ejemplo tablas).
-- Reduce iteraciones de edicion manual.
-
----
 
 ## Recomendaciones practicas de uso
 

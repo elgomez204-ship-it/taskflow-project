@@ -179,14 +179,9 @@ La configuracion de MCP en Cursor fue directa y funcional. El servidor `filesyst
 
 ---
 
-## Experimento: IA en programacion (comparativa sin IA vs con IA)
+## Experimento: IA en programacion 
 
-## Metodo
-
-Se realizaron dos rondas:
-
-1. **Ronda A (problemas pequenos generales)**: 3 ejercicios de programacion no ligados al proyecto.
-2. **Ronda B (tareas reales de TaskFlow)**: 3 tareas relacionadas con este repositorio.
+2. **Problemas de TaskFlow**
 
 Cada tarea se resolvio en dos fases:
 
@@ -195,11 +190,9 @@ Cada tarea se resolvio en dos fases:
 
 Criterios de comparacion usados:
 
-- tiempo invertido (minutos)
-- calidad del codigo (claridad, manejo de bordes, mantenibilidad)
-- comprension del problema (que tan claro quedo el por que de la solucion)
-
-> Nota: los tiempos son aproximados y medidos durante sesiones reales de trabajo.
+- tiempo invertido 
+- calidad del codigo 
+- comprension del problema
 
 
 

@@ -1,61 +1,7 @@
-const STORAGE_KEY = "taskflow_tasks";
 const MIN_TITLE_LENGTH = 3;
 const MAX_TITLE_LENGTH = 120;
 const ALLOWED_PRIORITIES = ["low", "medium", "high"];
 const ALLOWED_SORTS = ["newest", "oldest", "az", "completed-first", "priority-high"];
-
-/**
- * Crea un modelo de tarea.
- * @param {string} title
- * @param {"low"|"medium"|"high"} priority
- * @param {string} dueDate
- * @returns {{id:number,title:string,completed:boolean,createdAt:number,priority:string,dueDate:string}}
- */
-export function createTask(title, priority = "medium", dueDate = "") {
-  const safePriority = ALLOWED_PRIORITIES.includes(priority) ? priority : "medium";
-  return {
-    id: Date.now(),
-    title,
-    completed: false,
-    createdAt: Date.now(),
-    priority: safePriority,
-    dueDate
-  };
-}
-
-/**
- * Carga y normaliza tareas desde localStorage.
- * @returns {Array<{id:number,title:string,completed:boolean,createdAt:number,priority:string,dueDate:string}>}
- */
-export function loadTasks() {
-  const savedData = localStorage.getItem(STORAGE_KEY);
-  if (!savedData) return [];
-
-  try {
-    const parsedTasks = JSON.parse(savedData);
-    if (!Array.isArray(parsedTasks)) return [];
-
-    return parsedTasks
-      .filter(isValidTaskShape)
-      .map(task => ({
-        ...task,
-        createdAt: task.createdAt ?? task.id,
-        priority: task.priority ?? "medium",
-        dueDate: task.dueDate ?? ""
-      }));
-  } catch (error) {
-    console.error("No se pudieron cargar las tareas guardadas:", error);
-    return [];
-  }
-}
-
-/**
- * Guarda la colección completa de tareas.
- * @param {Array<{id:number,title:string,completed:boolean,createdAt:number,priority:string,dueDate:string}>} tasks
- */
-export function saveTasks(tasks) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
 
 /**
  * Valida el título de tarea de forma centralizada.
@@ -185,17 +131,3 @@ function hasDuplicateTitle(title, tasks) {
   return tasks.some(task => task.title.toLowerCase() === title.toLowerCase());
 }
 
-function isValidTaskShape(task) {
-  const safePriority = task?.priority ?? "medium";
-  const safeDueDate = task?.dueDate ?? "";
-  const safeCreatedAt = task?.createdAt ?? task?.id;
-
-  return (
-    typeof task?.id !== "undefined" &&
-    typeof task?.title === "string" &&
-    typeof task?.completed === "boolean" &&
-    typeof safeCreatedAt === "number" &&
-    ALLOWED_PRIORITIES.includes(safePriority) &&
-    typeof safeDueDate === "string"
-  );
-}

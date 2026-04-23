@@ -1,9 +1,6 @@
 import {
   calculateTaskStats,
-  createTask,
   getVisibleTasks,
-  loadTasks,
-  saveTasks,
   validateTaskMeta,
   validateTaskTitle
 } from "./js/task-manager.js";
@@ -13,14 +10,20 @@ import {
   showFormError,
   toggleEmptyState
 } from "./js/ui.js";
-
-const THEME_KEY = "taskflow_theme";
+import {
+  createTaskRequest,
+  deleteTaskRequest,
+  fetchTasks,
+  updateTaskRequest
+} from "./js/api/client.js";
 
 const state = {
-  tasks: loadTasks(),
+  tasks: [],
   selectedFilter: "all",
   searchQuery: "",
   sortBy: "newest",
+  isLoading: false,
+  networkError: "",
   lastDeletedTask: null,
   undoTimeoutId: null
 };
@@ -45,6 +48,7 @@ const dom = {
   progressDetail: document.querySelector("#progress-detail"),
   emptyState: document.querySelector("#empty-state"),
   inputError: document.querySelector("#task-input-error"),
+  networkFeedback: document.querySelector("#network-feedback"),
   undoBanner: document.querySelector("#undo-banner"),
   undoMessage: document.querySelector("#undo-message"),
   undoDeleteButton: document.querySelector("#undo-delete")
@@ -74,6 +78,23 @@ function renderTaskList() {
   });
 }
 
+function renderNetworkState() {
+  if (state.isLoading) {
+    dom.networkFeedback.textContent = "Cargando tareas desde el servidor...";
+    dom.networkFeedback.className = "text-sm text-blue-600 dark:text-blue-300";
+    return;
+  }
+
+  if (state.networkError) {
+    dom.networkFeedback.textContent = state.networkError;
+    dom.networkFeedback.className = "text-sm text-red-500";
+    return;
+  }
+
+  dom.networkFeedback.textContent = "";
+  dom.networkFeedback.className = "hidden";
+}
+
 /**
  * Actualiza contadores y barra de progreso.
  */
@@ -89,20 +110,35 @@ function renderStatistics() {
 }
 
 /**
- * Persiste y refresca toda la vista.
+ * Refresca toda la vista.
  */
 function syncView() {
-  saveTasks(state.tasks);
   renderTaskList();
   renderStatistics();
   toggleEmptyState(dom.emptyState, state.tasks.length);
+  renderNetworkState();
+}
+
+async function loadServerTasks() {
+  state.isLoading = true;
+  state.networkError = "";
+  syncView();
+
+  try {
+    state.tasks = await fetchTasks();
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Agrega una tarea validando el texto ingresado.
  * @param {string} rawTitle
  */
-function addTask(rawTitle) {
+async function addTask(rawTitle) {
   const validation = validateTaskTitle(rawTitle, state.tasks);
   const metaValidation = validateTaskMeta(dom.prioritySelect.value, dom.dueDateInput.value);
 
@@ -117,42 +153,83 @@ function addTask(rawTitle) {
   }
 
   clearFormError(dom.inputError);
-  state.tasks.push(
-    createTask(validation.normalizedTitle, metaValidation.priority, metaValidation.dueDate)
-  );
-  syncView();
-  dom.taskInput.value = "";
-  dom.prioritySelect.value = "medium";
-  dom.dueDateInput.value = "";
+
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    const createdTask = await createTaskRequest({
+      title: validation.normalizedTitle,
+      priority: metaValidation.priority,
+      dueDate: metaValidation.dueDate
+    });
+
+    state.tasks.push(createdTask);
+    dom.taskInput.value = "";
+    dom.prioritySelect.value = "medium";
+    dom.dueDateInput.value = "";
+  } catch (error) {
+    showFormError(dom.inputError, error.message);
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Alterna estado completado de una tarea.
  * @param {number} taskId
  */
-function toggleTaskStatus(taskId) {
-  state.tasks = state.tasks.map(task =>
-    task.id === taskId ? { ...task, completed: !task.completed } : task
-  );
-  syncView();
+async function toggleTaskStatus(taskId) {
+  const targetTask = state.tasks.find(task => task.id === taskId);
+  if (!targetTask) return;
+
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    const updatedTask = await updateTaskRequest(taskId, {
+      completed: !targetTask.completed
+    });
+    state.tasks = state.tasks.map(task => (task.id === taskId ? updatedTask : task));
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Elimina una tarea por id.
  * @param {number} taskId
  */
-function deleteTask(taskId) {
+async function deleteTask(taskId) {
   const removedTask = state.tasks.find(task => task.id === taskId);
-  state.tasks = state.tasks.filter(task => task.id !== taskId);
-  setupUndoDelete(removedTask);
-  syncView();
+
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    await deleteTaskRequest(taskId);
+    state.tasks = state.tasks.filter(task => task.id !== taskId);
+    setupUndoDelete(removedTask);
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Edita una tarea existente usando validaciones.
  * @param {number} taskId
  */
-function editTask(taskId) {
+async function editTask(taskId) {
   const targetTask = state.tasks.find(task => task.id === taskId);
   if (!targetTask) return;
 
@@ -169,12 +246,21 @@ function editTask(taskId) {
 
   if (validation.normalizedTitle === targetTask.title) return;
 
-  state.tasks = state.tasks.map(task =>
-    task.id === taskId
-      ? { ...task, title: validation.normalizedTitle }
-      : task
-  );
-  syncView();
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    const updatedTask = await updateTaskRequest(taskId, {
+      title: validation.normalizedTitle
+    });
+    state.tasks = state.tasks.map(task => (task.id === taskId ? updatedTask : task));
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
@@ -198,51 +284,81 @@ function setupUndoDelete(task) {
 /**
  * Restaura la ultima tarea eliminada si aun esta disponible.
  */
-function undoDeleteTask() {
+async function undoDeleteTask() {
   if (!state.lastDeletedTask) return;
 
-  state.tasks.push(state.lastDeletedTask);
-  state.lastDeletedTask = null;
-  if (state.undoTimeoutId) clearTimeout(state.undoTimeoutId);
-  dom.undoBanner.classList.add("hidden");
-  syncView();
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    const restoredTask = await createTaskRequest({
+      title: state.lastDeletedTask.title,
+      priority: state.lastDeletedTask.priority,
+      dueDate: state.lastDeletedTask.dueDate
+    });
+
+    state.tasks.push(restoredTask);
+    state.lastDeletedTask = null;
+    if (state.undoTimeoutId) clearTimeout(state.undoTimeoutId);
+    dom.undoBanner.classList.add("hidden");
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Marca todas las tareas como completadas.
  */
-function completeAllTasks() {
+async function completeAllTasks() {
   if (state.tasks.length === 0) return;
-  state.tasks = state.tasks.map(task => ({ ...task, completed: true }));
-  syncView();
+
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    await Promise.all(
+      state.tasks
+        .filter(task => !task.completed)
+        .map(task => updateTaskRequest(task.id, { completed: true }))
+    );
+    await loadServerTasks();
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
+  }
 }
 
 /**
  * Borra todas las tareas completadas.
  */
-function clearCompletedTasks() {
-  state.tasks = state.tasks.filter(task => !task.completed);
-  syncView();
-}
+async function clearCompletedTasks() {
+  const completedTasks = state.tasks.filter(task => task.completed);
+  if (completedTasks.length === 0) return;
 
-/**
- * Aplica el tema guardado previamente en localStorage.
- */
-function applySavedTheme() {
-  if (localStorage.getItem(THEME_KEY) === "dark") {
-    document.documentElement.classList.add("dark");
+  try {
+    state.isLoading = true;
+    state.networkError = "";
+    syncView();
+
+    await Promise.all(completedTasks.map(task => deleteTaskRequest(task.id)));
+    await loadServerTasks();
+  } catch (error) {
+    state.networkError = error.message;
+  } finally {
+    state.isLoading = false;
+    syncView();
   }
 }
 
-/**
- * Alterna entre modo claro y oscuro persistiendo la seleccion.
- */
 function toggleTheme() {
   document.documentElement.classList.toggle("dark");
-  localStorage.setItem(
-    THEME_KEY,
-    document.documentElement.classList.contains("dark") ? "dark" : "light"
-  );
 }
 
 /**
@@ -251,7 +367,7 @@ function toggleTheme() {
 function bindEvents() {
   dom.taskInput.addEventListener("keydown", event => {
     if (event.key === "Enter") {
-      addTask(dom.taskInput.value);
+      void addTask(dom.taskInput.value);
     }
   });
 
@@ -286,9 +402,8 @@ function bindEvents() {
  * Inicializa la aplicacion.
  */
 function initApp() {
-  applySavedTheme();
   bindEvents();
-  syncView();
+  void loadServerTasks();
 }
 
 initApp();
